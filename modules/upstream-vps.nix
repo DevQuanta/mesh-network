@@ -4,71 +4,67 @@
   pkgs,
   ...
 }:
-
 let
   cfg = config.services.meshNetwork;
 in
 {
-  options.services.meshNetwork = {
+  imports = [ ./common.nix ];
 
-    remoteFRPPort = lib.mkOption {
-      type = lib.types.port;
-      default = 8081;
-    };
+  config = lib.mkIf cfg.enable (
+    lib.mkMerge [
+      # Fixed: mkMerge parentheses structure
+      {
+        networking.firewall.allowedTCPPorts = [
+          80
+          443
+          cfg.remoteFRPPort
+        ];
 
-  };
+        networking.firewall.allowedUDPPorts = [ 3478 ];
 
-  config = lib.mkIf cfg.enable (lib.mkMerge) [
-    {
-      services.caddy = {
-        enable = true;
+        services.caddy = {
+          enable = true;
+          virtualHosts = {
+            # Fixed: Removed the "https://" schema from host keys
+            "derp.${cfg.domain}" = {
+              extraConfig = ''
+                reverse_proxy 127.0.0.1:${toString cfg.derperPort}
+              '';
+            };
 
-        # By using virtualHosts, NixOS automatically writes the Caddyfile
-        # and wires up the TLS certificates from security.acme for us!
-        virtualHosts = {
-          "https://derp.${cfg.domain}" = {
-            extraConfig = ''
-              reverse_proxy 127.0.0.1:${toString cfg.derperPort}
-            '';
-          };
-
-          "https://headscale.${cfg.domain}" = {
-            extraConfig = ''
-              reverse_proxy 127.0.0.1:${toString cfg.remoteFRPPort}
-            '';
-          };
-
-        };
-      };
-
-    }
-
-    {
-      systemd.services.derper = {
-        enable = true;
-        after = [ "network.target" ];
-        wantedBy = [ "multi-user.target" ];
-        serviceConfig = {
-          ExecStart = "${pkgs.tailscale}/bin/derper -a 127.0.0.1:${toString cfg.derperPort} -http-port ${toString cfg.derperPort} -certmode manual -hostname derp.${toString cfg.domain} -stun";
-        };
-      };
-
-    }
-
-    {
-      services.frp = {
-        enable = true;
-        role = "server";
-        settings = {
-          bindPort = cfg.remoteFRPPort;
-          auth = {
-            type = "token";
-            token = cfg.frpsToken;
+            "headscale.${cfg.domain}" = {
+              extraConfig = ''
+                reverse_proxy 127.0.0.1:${toString cfg.remoteFRPProxyPort}
+              '';
+            };
           };
         };
-      };
-    }
+      }
 
-  ];
+      {
+        # Using the official native NixOS module for DERPER
+        services.tailscale.derper = {
+          enable = true;
+          port = cfg.derperPort;
+          stunPort = 3478;
+          domain = "derp.${cfg.domain}";
+          verifyClients = false; # Set to true if you want to lock it down to your tailnet only
+        };
+      }
 
+      {
+        services.frp = {
+          enable = true;
+          role = "server";
+          settings = {
+            bindPort = cfg.remoteFRPPort;
+            auth = {
+              type = "token";
+              token = cfg.frpsToken;
+            };
+          };
+        };
+      }
+    ]
+  );
 }
