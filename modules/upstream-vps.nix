@@ -49,6 +49,8 @@ in
           stunPort = 3478;
           domain = "derp.${cfg.domain}";
           verifyClients = false; # Set to true if you want to lock it down to your tailnet only
+
+          configureNginx = false;
         };
       }
 
@@ -59,7 +61,7 @@ in
           settings = {
             bindPort = cfg.remoteFRPPort;
             auth = {
-              type = "token";
+              method = "token";
               token = cfg.frpsToken;
             };
           };
