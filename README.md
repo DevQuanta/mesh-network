@@ -42,6 +42,30 @@ None.
 * `services.meshNetwork.dnsBase`: Base name configuration for internal Tailnet resolution (Default: `mesh`).
 * `services.meshNetwork.localFRPPort`: The port targeted by the local FRP client proxy payload (Default: `80`).
 
+```nix
+# on upstream machine
+services.meshNetwork.upstream = {
+  enable = true;
+  domain = "example.com";
+  frpsToken = "your-secure-token-here";
+  derperPort = 8080;
+  remoteFRPPort = 7000;
+  remoteFRPProxyPort = 8082;
+};
+
+# on downstream machine
+services.meshNetwork.downstream = {
+  enable = true;
+  domain = "example.com";
+  frpsToken = "your-secure-token-here";
+  remoteIP = "1.2.3.4";
+  localFRPPort = 80;
+  headscalePort = 8085;
+  headscaleMetricsPort = 9090;
+  dnsBase = "mesh";
+  localIP = "127.0.0.1";
+};
+```
 
 Apply the configuration to your respective hosts using standard NixOS deployment mechanisms.
 
@@ -59,9 +83,9 @@ Ensure your cloud provider's external firewall allows the following inbound traf
 * **TCP 7000** (FRP Server Bind Port, or your configured `remoteFRPPort`)
 * **UDP 3478** (STUN traffic required for the DERP server)
 
-## Testing
+## Integration Testing
 
-This repository includes an offline testing module using the `testers.nixosTest` framework. It provisions two QEMU virtual machines, links them via a virtual network interface, and asserts that the FRP tunnel establishes and routes HTTPS traffic successfully.
+This repository includes an offline testing integration test utilizing the `testers.nixosTest` framework. It provisions two QEMU virtual machines, links them via a virtual network interface, and asserts that the FRP tunnel establishes and routes HTTPS traffic successfully.
 
 To execute the test headless:
 
