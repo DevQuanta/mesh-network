@@ -4,7 +4,7 @@ let
 in {
   imports = [ ./common.nix ];
 
-  options.services.meshNetwork = {
+  options.services.meshNetwork.downstream = {
     localFRPPort         = lib.mkOption { type = lib.types.port; default = 80; };
     headscalePort        = lib.mkOption { type = lib.types.port; default = 8085; };
     headscaleMetricsPort = lib.mkOption { type = lib.types.port; default = 9090; };
@@ -13,13 +13,13 @@ in {
     remoteIP             = lib.mkOption { type = lib.types.str; };
   };
 
-  config = lib.mkIf cfg.enable (lib.mkMerge [
+  config = lib.mkIf cfg.downstream.enable (lib.mkMerge [
     {
       services.caddy = {
         enable = true;
         virtualHosts = {
-          "http://headscale.${cfg.domain}".extraConfig = ''
-            reverse_proxy ${cfg.localIP}:${toString cfg.headscalePort}
+          "http://headscale.${cfg.downstream.domain}".extraConfig = ''
+            reverse_proxy ${cfg.downstream.localIP}:${toString cfg.downstream.headscalePort}
           '';
         };
       };
@@ -28,15 +28,15 @@ in {
     {
       services.headscale = {
         enable = true;
-        port = cfg.headscalePort;
+        port = cfg.downstream.headscalePort;
         settings = {
-          server_url = "https://headscale.${cfg.domain}";
-          listen_addr = "${cfg.localIP}:${toString cfg.headscalePort}";
-          metrics_listen_addr = "${cfg.localIP}:${toString cfg.headscaleMetricsPort}";
+          server_url = "https://headscale.${cfg.downstream.domain}";
+          listen_addr = "${cfg.downstream.localIP}:${toString cfg.downstream.headscalePort}";
+          metrics_listen_addr = "${cfg.downstream.localIP}:${toString cfg.downstream.headscaleMetricsPort}";
 
           dns = {
             magic_dns = true;
-            base_domain = "${cfg.dnsBase}.${cfg.domain}";
+            base_domain = "${cfg.downstream.dnsBase}.${cfg.downstream.domain}";
             nameservers.global = [ "1.1.1.1" "1.0.0.1" ];
           };
 
@@ -57,11 +57,11 @@ in {
             nodes:
               - name: 900a
                 regionid: 900
-                hostname: derp.${cfg.domain}
-                ipv4: ${cfg.remoteIP}
+                hostname: derp.${cfg.downstream.domain}
+                ipv4: ${cfg.downstream.remoteIP}
                 stunport: 3478
                 stunonly: false
-                derpport: ${toString cfg.derperPort}
+                derpport: ${toString cfg.downstream.derperPort}
       '';
     }
 
@@ -70,20 +70,19 @@ in {
         enable = true;
         role = "client";
         settings = {
-          serverAddr = cfg.remoteIP;
-          serverPort = cfg.remoteFRPPort;
-          # Fixed syntax grouping to guarantee safe object building across standard formats
+          serverAddr = cfg.downstream.remoteIP;
+          serverPort = cfg.downstream.remoteFRPPort;
           auth = {
             method = "token";
-            token = cfg.frpsToken;
+            token = cfg.downstream.frpsToken;
           };
           proxies = [
             {
               name = "headscale-tcp-passthrough";
               type = "tcp";
-              localIP = cfg.localIP;
-              localPort = cfg.localFRPPort;
-              remotePort = cfg.remoteFRPProxyPort;
+              localIP = cfg.downstream.localIP;
+              localPort = cfg.downstream.localFRPPort;
+              remotePort = cfg.downstream.remoteFRPProxyPort;
             }
           ];
         };

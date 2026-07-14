@@ -1,23 +1,17 @@
-{
-  config,
-  lib,
-  pkgs,
-  ...
-}:
+{ config, lib, pkgs, ... }:
 let
   cfg = config.services.meshNetwork;
 in
 {
   imports = [ ./common.nix ];
 
-  config = lib.mkIf cfg.enable (
+  config = lib.mkIf cfg.upstream.enable (
     lib.mkMerge [
-      # Fixed: mkMerge parentheses structure
       {
         networking.firewall.allowedTCPPorts = [
           80
           443
-          cfg.remoteFRPPort
+          cfg.upstream.remoteFRPPort
         ];
 
         networking.firewall.allowedUDPPorts = [ 3478 ];
@@ -25,16 +19,15 @@ in
         services.caddy = {
           enable = true;
           virtualHosts = {
-            # Fixed: Removed the "https://" schema from host keys
-            "derp.${cfg.domain}" = {
+            "derp.${cfg.upstream.domain}" = {
               extraConfig = ''
-                reverse_proxy 127.0.0.1:${toString cfg.derperPort}
+                reverse_proxy 127.0.0.1:${toString cfg.upstream.derperPort}
               '';
             };
 
-            "headscale.${cfg.domain}" = {
+            "headscale.${cfg.upstream.domain}" = {
               extraConfig = ''
-                reverse_proxy 127.0.0.1:${toString cfg.remoteFRPProxyPort}
+                reverse_proxy 127.0.0.1:${toString cfg.upstream.remoteFRPProxyPort}
               '';
             };
           };
@@ -42,14 +35,12 @@ in
       }
 
       {
-        # Using the official native NixOS module for DERPER
         services.tailscale.derper = {
           enable = true;
-          port = cfg.derperPort;
+          port = cfg.upstream.derperPort;
           stunPort = 3478;
-          domain = "derp.${cfg.domain}";
-          verifyClients = false; # Set to true if you want to lock it down to your tailnet only
-
+          domain = "derp.${cfg.upstream.domain}";
+          verifyClients = false; 
           configureNginx = false;
         };
       }
@@ -59,10 +50,10 @@ in
           enable = true;
           role = "server";
           settings = {
-            bindPort = cfg.remoteFRPPort;
+            bindPort = cfg.upstream.remoteFRPPort;
             auth = {
               method = "token";
-              token = cfg.frpsToken;
+              token = cfg.upstream.frpsToken;
             };
           };
         };

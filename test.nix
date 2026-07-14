@@ -1,4 +1,3 @@
-# test.nix
 { pkgs ? import <nixpkgs> {} }:
 
 pkgs.testers.nixosTest {
@@ -12,13 +11,13 @@ pkgs.testers.nixosTest {
         prefixLength = 24;
       }];
 
-      # FIX: Teach the upstream machine how to resolve the testbed domains locally
+      # dns resolution
       networking.extraHosts = ''
         127.0.0.1 derp.testbed.local
         127.0.0.1 headscale.testbed.local
       '';
 
-      services.meshNetwork = {
+      services.meshNetwork.upstream = {
         enable = true;
         domain = "testbed.local";
         frpsToken = "super-secret-test-token";
@@ -28,22 +27,23 @@ pkgs.testers.nixosTest {
     downstream = { ... }: {
       imports = [ ./modules/downstream-local.nix ];
       
-      # FIXED: Added network interface mapping so the client can talk to the server
+      # fix: network interface mapping so the client can talk to the server
       networking.interfaces.eth1.ipv4.addresses = [{
         address = "192.168.56.11";
         prefixLength = 24;
       }];
 
-networking.extraHosts = ''
+      networking.extraHosts = ''
         127.0.0.1 headscale.testbed.local
         192.168.56.10 derp.testbed.local
       '';
 
-      services.meshNetwork = {
+      # All configuration (including domain, token, and specific keys) inside the downstream block
+      services.meshNetwork.downstream = {
         enable = true;
         domain = "testbed.local";
-        remoteIP = "192.168.56.10";
         frpsToken = "super-secret-test-token";
+        remoteIP = "192.168.56.10";
       };
     };
   };
