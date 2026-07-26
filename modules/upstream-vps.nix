@@ -1,9 +1,15 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
   cfg = config.services.meshNetwork;
 in
 {
   imports = [ ./common.nix ];
+
 
   config = lib.mkIf cfg.upstream.enable (
     lib.mkMerge [
@@ -14,24 +20,54 @@ in
           cfg.upstream.remoteFRPPort
         ];
 
-        networking.firewall.allowedUDPPorts = [ 3478 ];
+        security.acme = {
+          acceptTerms = true;
+          defaults.email = cfg.upstream.defaultEmail;
 
-        services.caddy = {
-          enable = true;
-          virtualHosts = {
-            "derp.${cfg.upstream.domain}" = {
-              extraConfig = ''
-                reverse_proxy 127.0.0.1:${toString cfg.upstream.derperPort}
-              '';
-            };
-
-            "headscale.${cfg.upstream.domain}" = {
-              extraConfig = ''
-                reverse_proxy 127.0.0.1:${toString cfg.upstream.remoteFRPProxyPort}
-              '';
-            };
-          };
         };
+
+        services.nginx = {
+          enable = true;
+          streamConfig = ''
+            map $ssl_preread_server_name $ssl_routing_backend {
+                  derp.${toString cfg.upstream.domain}          127.0.0.2:${cfg.upstream.derperPort};
+                  headscale.${toString cfg.upstream.domain}     127.0.0.1:${cfg.upstream.remoteFRPPort};
+                }
+
+            server {
+                listen 443;
+
+                ssl_preread on;
+                proxy_pass $ssl_routing_backend;
+
+                proxy_connect_timeout 5s;
+                proxy_timeout 10m;
+            }
+          '';
+
+          virtualHosts."derp.${toString cfg.upstream.domain}" = {
+            server_name = cfg.upstream.domain;
+            forceSSL = true; # Automatically redirect HTTP to HTTPS
+            enableACME = true; # Triggers the automated ACME webroot challenge setup
+            listen = [
+              {
+                addr = "0.0.0.0";
+                port = 80;
+              }
+              {
+                addr = "[::]";
+                port = 80;
+              }
+            ];
+
+            root = "/var/www/html";
+            locations."/".return = 404;
+
+          };
+
+        };
+
+        networking.firewall.allowedUDPPorts = [ 3478 ];
       }
 
       {
@@ -40,7 +76,7 @@ in
           port = cfg.upstream.derperPort;
           stunPort = 3478;
           domain = "derp.${cfg.upstream.domain}";
-          verifyClients = false; 
+          verifyClients = true;
           configureNginx = false;
         };
       }

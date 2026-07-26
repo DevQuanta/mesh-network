@@ -9,7 +9,7 @@ let
 
     derperPort = lib.mkOption {
       type = lib.types.port;
-      default = 8080;
+      default = 8443;
     };
 
     remoteFRPPort = lib.mkOption {
@@ -20,6 +20,11 @@ let
     remoteFRPProxyPort = lib.mkOption {
       type = lib.types.port;
       default = 8082;
+    };
+
+    defaultEmail = lib.mkOption {
+      type = lib.types.str;
+      description = "Email used for ACME verification";
     };
 
     frpsToken = lib.mkOption {
