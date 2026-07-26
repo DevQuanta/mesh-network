@@ -67,7 +67,7 @@ in
         services.caddy = {
           enable = true;
           virtualHosts = {
-            "http://headscale.${cfg.downstream.domain}".extraConfig = ''
+            "https://headscale.${cfg.downstream.domain}".extraConfig = ''
               reverse_proxy ${cfg.downstream.localIP}:${toString cfg.downstream.headscalePort}
             '';
           };

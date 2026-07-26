@@ -30,8 +30,8 @@ in
           enable = true;
           streamConfig = ''
             map $ssl_preread_server_name $ssl_routing_backend {
-                  derp.${toString cfg.upstream.domain}          127.0.0.2:${cfg.upstream.derperPort};
-                  headscale.${toString cfg.upstream.domain}     127.0.0.1:${cfg.upstream.remoteFRPPort};
+                  derp.${toString cfg.upstream.domain}          127.0.0.2:${toString cfg.upstream.derperPort};
+                  headscale.${toString cfg.upstream.domain}     127.0.0.1:${toString cfg.upstream.remoteFRPPort};
                 }
 
             server {
@@ -46,7 +46,7 @@ in
           '';
 
           virtualHosts."derp.${toString cfg.upstream.domain}" = {
-            server_name = cfg.upstream.domain;
+            serverName = cfg.upstream.domain;
             forceSSL = true; # Automatically redirect HTTP to HTTPS
             enableACME = true; # Triggers the automated ACME webroot challenge setup
             listen = [
