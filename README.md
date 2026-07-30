@@ -1,6 +1,7 @@
 # Self-Hosted Mesh Network Infrastructure
 
-Status
+## Status
+
 ⚠️ Currently undergoing testing
 
 ## Overview
