@@ -1,5 +1,8 @@
 # Self-Hosted Mesh Network Infrastructure
 
+## Status
+**⚠️ Currently undergoing testing**
+
 ## Overview
 This repository contains a declarative NixOS flake designed to deploy a self-hosted mesh network. It provisions a Headscale coordination server on a downstream local node and routes public traffic through an upstream Virtual Private Server (VPS) via a Fast Reverse Proxy (FRP) tunnel. The upstream node also hosts a Tailscale DERP relay server for NAT traversal. 
 
